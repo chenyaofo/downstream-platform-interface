@@ -29,7 +29,12 @@ class Model:
         # if downsampling_coefficient is None, this func should return the shape of last layer features
         # e.g., get_features_shape(downsampling_coefficient=4) -> (64,56,56)
         pass
-
+        
+    def is_hierarchical_features(self):
+        # if this model has hierarchical features (e.g., resnet and swin transformer), return True;
+        # otherwise (e.g., vision transformer), return False
+        pass
+    
     def has_features(self, downsampling_coefficient: int = None):
         # if this model can provide 1/downsampling_coefficient resolution features, return True; return False otherwise
         # if downsampling_coefficient is None, this func always return True
