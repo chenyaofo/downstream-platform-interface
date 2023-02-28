@@ -56,7 +56,7 @@ class Model:
 
 Another One:
 
-```
+``` python
 import typing
 
 class LayerIndexNotFoundException(Exception):
