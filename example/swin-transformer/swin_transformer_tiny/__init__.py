@@ -1,0 +1,1 @@
+from .exported_model import SwinTransformer_Tiny

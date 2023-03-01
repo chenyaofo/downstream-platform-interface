@@ -1,0 +1,1 @@
+from .exported_model import VisionTransformer_B16
