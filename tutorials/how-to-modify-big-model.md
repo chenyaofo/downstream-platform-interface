@@ -13,12 +13,12 @@
 注意，用户不需要修改原始模型定义文件，只需要新增exported_model.py和hubconf.py文件。具体的文件目录结构如下([目录参考](https://github.com/chenyaofo/downstream-platform-interface/tree/main/example))：
 
 ```
--swin-transformer　　　　　　　　// **把该文件夹打包为.zip压缩包**，即满足大模型接口规范，可把压缩包上传至平台进行大模型入仓校验。
----swin_transformer_tiny　　　// **该文件夹必须有唯一的命名**，不能和其他预训练大模型的文件夹命名重复，否则会引起导入失败。
+-swin-transformer　　　　　　// 把该文件夹打包为.zip压缩包，即满足大模型接口规范，可把压缩包上传至平台进行大模型入仓校验。
+---swin_transformer_tiny　　// 该文件夹必须有唯一的命名，不能和其他预训练大模型的文件夹命名重复，否则会引起导入失败。
 -----__init__.py　　　　　　　// python包初始化文件，需在里面导入exported_model.py中定义的预训练大模型接口类。
 -----exported_model.py　　　// 需要用户编写的预训练大模型接口类定义文件，文件命名无强制要求。
 -----model.py　　　　　　　　　// 预训练大模型原本的定义文件，命名无要求（如模型定义复杂，可用多个.py文件定义）。
----hubconf.py　　　　　　　　　// **该文件必须命名为hubconf.py，否则系统无法识别。**
+---hubconf.py　　　　　　　　　// 该文件必须命名为hubconf.py，否则系统无法识别。
 ---weights　　　　　　　　　　　// 存放模型参数和模型图的文件夹。
 -----swin_t-704ceda3.pth　// 模型参数。在exported_model.py的from_pretrained()函数中加载该文件。
 ```
