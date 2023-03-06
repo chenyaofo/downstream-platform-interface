@@ -86,14 +86,26 @@ class SwinTransformer_Tiny(SwinTransformer, BigModel4DownstreamInterface):
         self._check_layer_index_range(layer_indexes)
         self.layer_indexes = layer_indexes
 
-        def save_features_hook(m, in_features, out_features, layer_index: int, feature_buffers: dict):
-            feature_buffers[layer_index] = out_features
+        class SaveFeaturesHook:
+            def __init__(self, feature_buffer:dict, layer_index:int):
+                self.feature_buffer = feature_buffer
+                self.layer_index = layer_index
+
+            def excute(self, m, in_features, out_features):
+                self.feature_buffers[self.layer_index] = out_features
+
+        # def save_features_hook(m, in_features, out_features, layer_index: int, feature_buffers: dict):
+        #     feature_buffers[layer_index] = out_features
 
         for index, module in enumerate(self.feature_entries):
             if index in layer_indexes:
                 self.hooks.append(
                     module.register_forward_hook(
-                        functools.partial(save_features_hook, layer_index=index, feature_buffers=self.feature_buffers)
+                        # functools.partial(save_features_hook, layer_index=index, feature_buffers=self.feature_buffers)
+                        SaveFeaturesHook(
+                            feature_buffer=self.feature_buffers,
+                            layer_index=index
+                        ).excute
                     )
                 )
 
