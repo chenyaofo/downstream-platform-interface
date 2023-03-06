@@ -14,7 +14,7 @@
 
 --swin-transformer　　　　　　　　// **把该文件夹打包为.zip压缩包**，即满足大模型接口规范，可把压缩包上传至平台进行大模型入仓校验。<br>
 　　--swin_transformer_tiny　　　// **该文件夹必须有唯一的命名**，不能和其他预训练大模型的文件夹命名重复，否则会引起导入失败。<br>
-　　　　--__init__.py　　　　　　　// python包初始化文件，需在里面导入exported_model.py中定义的预训练大模型接口类。<br>
+　　　　--\_\_init\_\_.py　　　　　　　// python包初始化文件，需在里面导入exported_model.py中定义的预训练大模型接口类。<br>
 　　　　--exported_model.py　　　// 需要用户编写的预训练大模型接口类定义文件，文件命名无强制要求。<br>
 　　　　--model.py　　　　　　　　　// 预训练大模型原本的定义文件，命名无要求（如模型定义复杂，可用多个.py文件定义）。<br>
 　　--hubconf.py　　　　　　　　　// **该文件必须命名为hubconf.py，否则系统无法识别。**<br>
