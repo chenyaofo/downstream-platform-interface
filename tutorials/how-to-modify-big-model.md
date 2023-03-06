@@ -16,7 +16,7 @@
 　　--swin_transformer_tiny　　　// **该文件夹必须有唯一的命名**，不能和其他预训练大模型的文件夹命名重复，否则会引起导入失败。<br>
 　　　　--__init__.py　　　　　　　// python包初始化文件，需在里面导入exported_model.py中定义的预训练大模型接口类。<br>
 　　　　--exported_model.py　　　// 需要用户编写的预训练大模型接口类定义文件，文件命名无强制要求。<br>
-　　　　--model.py　　　　　　　　　// 预训练大模型原本的定义文件，文件命名无强制要求（如果模型定义较复杂，可用多个.py文件定义）。<br>
+　　　　--model.py　　　　　　　　　// 预训练大模型原本的定义文件，命名无要求（如模型定义复杂，可用多个.py文件定义）。<br>
 　　--hubconf.py　　　　　　　　　// **该文件必须命名为hubconf.py，否则系统无法识别。**<br>
 　　--weights　　　　　　　　　　　// 存放模型参数和模型图的文件夹。<br>
 　　　　--swin_t-704ceda3.pth　// 模型参数。在exported_model.py的from_pretrained()函数中加载该文件。<br>
