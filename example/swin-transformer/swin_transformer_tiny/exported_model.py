@@ -87,8 +87,8 @@ class SwinTransformer_Tiny(SwinTransformer, BigModel4DownstreamInterface):
         self.layer_indexes = layer_indexes
 
         class SaveFeaturesHook:
-            def __init__(self, feature_buffer:dict, layer_index:int):
-                self.feature_buffer = feature_buffer
+            def __init__(self, feature_buffers:dict, layer_index:int):
+                self.feature_buffers = feature_buffers
                 self.layer_index = layer_index
 
             def excute(self, m, in_features, out_features):
@@ -103,7 +103,7 @@ class SwinTransformer_Tiny(SwinTransformer, BigModel4DownstreamInterface):
                     module.register_forward_hook(
                         # functools.partial(save_features_hook, layer_index=index, feature_buffers=self.feature_buffers)
                         SaveFeaturesHook(
-                            feature_buffer=self.feature_buffers,
+                            feature_buffers=self.feature_buffers,
                             layer_index=index
                         ).excute
                     )

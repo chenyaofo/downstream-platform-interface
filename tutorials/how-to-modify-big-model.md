@@ -150,7 +150,7 @@
         return shapes[layer_index]
    ```
 
-   根据该预训练模型是否存在金字塔特征结构，直接返回True或者False。例如，Swim-transformer存在不同长宽的feature map，拥有金字塔结构的特征。而Vision-transformer的feature map的长和宽不随网络深度变化而变化，故不存在金字塔结构的特征。
+   根据该预训练模型是否存在金字塔特征结构，直接返回True或者False。例如，Swin transformer存在不同长宽的feature map，拥有金字塔结构的特征。而Vision-transformer的feature map的长和宽不随网络深度变化而变化，故不存在金字塔结构的特征。
    
    ```
     def is_hierarchical_features(self) -> bool:
@@ -173,8 +173,8 @@
         self.layer_indexes = layer_indexes
 
         class SaveFeaturesHook:
-            def __init__(self, feature_buffer:dict, layer_index:int):
-                self.feature_buffer = feature_buffer
+            def __init__(self, feature_buffers:dict, layer_index:int):
+                self.feature_buffers = feature_buffers
                 self.layer_index = layer_index
 
             def excute(self, m, in_features, out_features):
@@ -189,21 +189,125 @@
                     module.register_forward_hook(
                         # functools.partial(save_features_hook, layer_index=index, feature_buffers=self.feature_buffers)
                         SaveFeaturesHook(
-                            feature_buffer=self.feature_buffers,
+                            feature_buffers=self.feature_buffers,
                             layer_index=index
                         ).excute
                     )
                 )
    ```
 
+   根据输入的index列表，返回对应的feature maps
+   ```
+   def fetch_features(self) -> typing.Sequence[torch.Tensor]:
+        if not hasattr(self, "layer_indexes"):
+            raise ValueError("Please call register_features_buffer_by_layer_indexes before fetch_features")
+        return [
+            self.feature_buffers[key] for key in self.layer_indexes
+        ]
+   ```
+
+   模型推理函数
+   ```
+    def forward(self, x: torch.Tensor):
+        # here, we slightly modify original forward function, make it run without classfier head
+
+        x = self.features(x)
+        return x
+
+   ```
+
+
+## 三、保存预训练模型参数
+    模型参数文件需建议统一保存在weights文件夹下
+    -swin-transformer          // 把该文件夹打包为.zip压缩包，即满足大模型接口规范，可把压缩包上传至平台进行大模型入仓校验。
+    ---swin_transformer_tiny   // 该文件夹必须有唯一的命名，不能和其他预训练大模型的文件夹命名重复，否则会引起导入失败。
+    -----__init__.py           // python包初始化文件，需在里面导入exported_model.py中定义的预训练大模型接口类。
+    -----exported_model.py     // 需要用户编写的预训练大模型接口类定义文件，文件命名无强制要求。
+    -----model.py              // 预训练大模型原本的定义文件，命名无要求（如模型定义复杂，可用多个.py文件定义）。
+    ---hubconf.py              // 该文件必须命名为hubconf.py，否则系统无法识别。
+    ---weights                 // 存放模型参数和模型图的文件夹。
+    -----swin_t-704ceda3.pth   // 模型参数。在exported_model.py的from_pretrained()函数中加载该文件。
+    ```
 
 
 
+## 四、使用标准接口加载预训练模型，推理预训练模型并获取指定的特征
 
-## 三、保存大模型
+请参考[usage.py](https://github.com/chenyaofo/downstream-platform-interface/blob/main/usage.py)中的样例代码。
+
+下载预训练swin transofrmer模型到目录下(./example/swin-transformer/weights/)：
+```
+wget https://download.pytorch.org/models/swin_t-704ceda3.pth
+```
 
 
+下载预训练vision transofrmer模型到目录下(./example/vision-transformer/weights/)：
+```
+wget https://download.pytorch.org/models/vit_b_16-c867db91.pth
+```
+
+运行usage.py，加载预训练swin transformer和预训练vision transformer模型，并获取模型推理的中间特征。
+```
+python usage.py
+```
 
 
+获取vision transformer的最后四个block的输出特征。
+```
+# usage for vision transformer
+print("vision transformer")
+model: model_downstream_interface.BigModel4DownstreamInterface \
+    = model_downstream_interface.load_model(
+        os.path.abspath("example/vision-transformer")
+    )
 
-## 四、使用标准接口加载大模型，推理大模型并获取指定的特征
+all_layer_indexed = list(range(model.get_depth()))
+
+for i in all_layer_indexed:
+    print(f"feature shape in layer {i}", model.get_features_shape(input_shape=(3, 224, 224), layer_index=i))
+
+# here, we only select the last 4 layers
+model.register_features_buffer_by_layer_indexes(all_layer_indexed[-4:])
+
+x = torch.rand(1, 3, 224, 224)
+
+model(x)
+
+features = model.fetch_features()
+
+for f in features:
+    print("Actual fetched tesnor shape", f.shape)
+```
+
+
+获取swin transformer的具有不同长宽尺寸的金字塔特征。
+```
+# usage for swin transformer
+print("-"*50 + "\n" + "swin transformer")
+model: model_downstream_interface.BigModel4DownstreamInterface \
+    = model_downstream_interface.load_model(
+        os.path.abspath("example/swin-transformer")
+    )
+
+
+all_layer_indexed = list(range(model.get_depth()))
+
+for i in all_layer_indexed:
+    print(f"feature shape in layer {i}", model.get_features_shape(input_shape=(3, 224, 224), layer_index=i))
+
+# here, we select layer based on a pyramid way
+model.register_features_buffer_by_layer_indexes(
+    get_pyramid_feature_layer_indexes(
+        model.get_features_shapes_all_layers(input_shape=(3, 224, 224))
+    )
+)
+
+x = torch.rand(1, 3, 224, 224)
+
+model(x)
+
+features = model.fetch_features()
+
+for f in features:
+    print("Actual fetched tesnor shape", f.shape)
+```
