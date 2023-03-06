@@ -60,9 +60,9 @@
 
    初始化self.feature_entries列表，保存所有SwinTransformerBlock对象。
    
-   初始化self.hooks列表，用于存储获取特征所需的hook对象
+   初始化self.hooks列表，用于存储获取特征所需的hook对象。
    
-   初始化self.feature_buffers字典，用于存储模型推理时的中间层特征
+   初始化self.feature_buffers字典，用于存储模型推理时的中间层特征。
    
    ```
    class SwinTransformer_Tiny(SwinTransformer, BigModel4DownstreamInterface):
@@ -77,7 +77,7 @@
         self.feature_buffers = dict()
    ```
 
-   返回对模型的描述
+   返回对模型的描述。
    ```
     def get_description(self):
         return '''
@@ -93,7 +93,7 @@
 
    然后，用户需在该函数中显式给出预训练模型的参数的路径（如样例中的“swin_t-704ceda3.pth”），确保运行该函数即可加载预训练模型参数。
 
-   最后，使用model.load_state_dict(torch.load(load_weights, map_location="cpu"))把模型参数导入至model对象中并返回
+   最后，使用model.load_state_dict(torch.load(load_weights, map_location="cpu"))把模型参数导入至model对象中并返回。
 
    ```
     @classmethod
@@ -122,13 +122,13 @@
         return model
    ```
 
-   返回self.feature_entries的长度
+   返回self.feature_entries的长度。
    ```
     def get_depth(self) -> int:
         return len(self.feature_entries)
    ```
 
-   函数输入为“模型输入图像的尺寸”，以及“用户指定的layer_index（也就是feature_entries的index）”，返回该index所对应的特征的尺寸
+   函数输入为“模型输入图像的尺寸”，以及“用户指定的layer_index（也就是feature_entries的index）”，返回该index所对应的特征的尺寸。
    ```
     def get_features_shape(self, input_shape: typing.Sequence[int] = None, layer_index: int = None):
         if len(input_shape) != 3:
@@ -157,7 +157,7 @@
         return True
    ```
    
-   为对应的模块注册钩子hook，以在模型推理时通过钩子hook获取模型的中间特征。函数的输入是“需要注册钩子获取中间特征的layer/feature_entries/模块的index”
+   为对应的模块注册钩子hook，以在模型推理时通过钩子hook获取模型的中间特征。函数的输入是“需要注册钩子获取中间特征的layer/feature_entries/模块的index”。
    
    定义save_features_hook函数，让钩子hook在模型推理时自动把该层输出特征保存到字典feature_buffers中。
 
@@ -196,7 +196,7 @@
                 )
    ```
 
-   根据输入的index列表，返回对应的feature maps
+   根据输入的index列表，返回对应的feature maps。
    ```
    def fetch_features(self) -> typing.Sequence[torch.Tensor]:
         if not hasattr(self, "layer_indexes"):
@@ -206,7 +206,7 @@
         ]
    ```
 
-   模型推理函数
+   模型推理函数。
    ```
     def forward(self, x: torch.Tensor):
         # here, we slightly modify original forward function, make it run without classfier head
@@ -218,7 +218,9 @@
 
 
 ## 三、保存预训练模型参数
-    模型参数文件需建议统一保存在weights文件夹下
+    模型参数文件需建议统一保存在weights文件夹下。
+
+    ```
     -swin-transformer          // 把该文件夹打包为.zip压缩包，即满足大模型接口规范，可把压缩包上传至平台进行大模型入仓校验。
     ---swin_transformer_tiny   // 该文件夹必须有唯一的命名，不能和其他预训练大模型的文件夹命名重复，否则会引起导入失败。
     -----__init__.py           // python包初始化文件，需在里面导入exported_model.py中定义的预训练大模型接口类。
