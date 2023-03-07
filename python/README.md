@@ -6,7 +6,7 @@
 python setup.py install
 ```
 
-在项目的根目录下面执行（开发模式）：
+在本目录下面执行（开发模式）：
 ```
 python setup.py develop
 ```
