@@ -8,7 +8,7 @@
 
 请查看大模型接口抽象类、抽象函数、及其注释[model_abc.py](https://github.com/chenyaofo/downstream-platform-interface/blob/main/python/model_downstream_interface/model_abc.py)，大致了解每个抽象函数的功能。
 
-接下来，将结合改造Pytorch框架中的[swin-transformer](https://github.com/chenyaofo/downstream-platform-interface/tree/main/example/swin-transformer) 和 [vision-transformer](https://github.com/chenyaofo/downstream-platform-interface/tree/main/example/vision-transformer) 这两个具体例子，介绍如何继承大模型接口抽象类并实现其抽象接口函数。
+接下来，将结合改造Pytorch框架中的[swin-transformer](https://github.com/chenyaofo/downstream-platform-interface/tree/main/example/swin-transformer) 和 [vision-transformer](https://github.com/chenyaofo/downstream-platform-interface/tree/main/example/vision-transformer) 这两个具体例子，介绍改造大模型使得其符合平台标准。
 
 注意，用户不需要修改原始模型定义文件，只需要新增exported_model.py和hubconf.py文件。具体的文件目录结构如下([目录参考](https://github.com/chenyaofo/downstream-platform-interface/tree/main/example))：
 
@@ -31,21 +31,22 @@
    dependencies = ["torch", "torchvision"]
    ```
    
-   import [exported_model.py](https://github.com/chenyaofo/downstream-platform-interface/blob/main/example/swin-transformer/swin_transformer_tiny/exported_model.py)中，用户实现的SwinTransformer_Tiny类。该类继承了SwinTransformer, BigModel4DownstreamInterface两个父类。
-   其中，SwinTransformer是待入仓的大模型定义类，而BigModel4DownstreamInterface则是[model_abc.py](https://github.com/chenyaofo/downstream-platform-interface/blob/main/python/model_downstream_interface/model_abc.py)中的大模型接口抽象类。
+   然后导入改造定义好的大模型类`SwinTransformer_Tiny`，
    ```
    from swin_transformer_tiny import SwinTransformer_Tiny
    ```
    
-   重命名SwinTransformer_Tiny为BIG_PRETRAINED_MODEL，以方便后续统一调用。这一步命名是一定要进行的，且重命名一定要命名为`BIG_PRETRAINED_MODEL`，否则系统无法识别加载预训练大模型。
+   最后重命名大模型类SwinTransformer_Tiny为BIG_PRETRAINED_MODEL，以方便后续统一调用。这一步命名是一定要进行的，且重命名一定要命名为`BIG_PRETRAINED_MODEL`，否则系统无法识别加载预训练大模型。
    ```
    BIG_PRETRAINED_MODEL = SwinTransformer_Tiny
    ```
 
 2. 以[swin-transformer](https://github.com/chenyaofo/downstream-platform-interface/tree/main/example/swin-transformer)为例，介绍如何编写 
-   [exported_model.py](https://github.com/chenyaofo/downstream-platform-interface/blob/main/example/swin-transformer/swin_transformer_tiny/exported_model.py)。
+   [exported_model.py](https://github.com/chenyaofo/downstream-platform-interface/blob/main/example/swin-transformer/swin_transformer_tiny/exported_model.py)。本质上`exported_model.py`中就是继承了所有BigModel4DownstreamInterface的接口并实现了所有接口函数，下面将逐一讲解每个接口函数怎么实现。
    **注意，样例中的模型所用深度学习框架为PyTorch，因此实现过程使用了PyTorch提供的一些函数。若要使用其他框架的预训练大模型，请自行调用具有对应功能的函数。**
    
+   ---
+
    从model_downstream_interface导入BigModel4DownstreamInterface抽象类，从.model导入预训练模型的原始类。
    ```
    import os
@@ -55,6 +56,8 @@
    from .model import SwinTransformer, SwinTransformerBlock
    from model_downstream_interface import BigModel4DownstreamInterface
    ```
+
+    ---
 
    定义SwinTransformer_Tiny类（类名用户自定，但注意需要在hubconf.py中通过BIG_PRETRAINED_MODEL = SwinTransformer_Tiny把类名赋值给BIG_PRETRAINED_MODEL），继承预训练模型的原始类SwinTransformer和大模型接口抽象类BigModel4DownstreamInterface。
 
@@ -77,6 +80,8 @@
         self.feature_buffers = dict()
    ```
 
+   ---
+
    `get_description`函数返回对模型的描述。
    ```
     def get_description(self):
@@ -87,6 +92,8 @@
                '''
    ```
 
+    ---
+    
    `from_pretrained`函数用于加载预训练模型。其中“cls”为class SwinTransformer_Tiny本身。
 
    首先通过 model = cls(xxx) 实例化一个SwinTransformer_Tiny对象，这里实例化的时候需要将所有的参数的设置好，用户调用的时候一般不会给任何参数。
