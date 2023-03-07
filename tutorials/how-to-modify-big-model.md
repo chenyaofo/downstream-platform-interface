@@ -1,6 +1,6 @@
-# 该文档介绍如何改造大模型使得其符合标准
+# 如何改造大模型使得其符合平台标准
 
-## 一、安装教程
+## 一、安装大模型下游任务接口库
 
 请查看[安装教程](https://github.com/chenyaofo/downstream-platform-interface/blob/main/python/README.md)
 
@@ -13,20 +13,20 @@
 注意，用户不需要修改原始模型定义文件，只需要新增exported_model.py和hubconf.py文件。具体的文件目录结构如下([目录参考](https://github.com/chenyaofo/downstream-platform-interface/tree/main/example))：
 
 ```
--swin-transformer          // 把该文件夹打包为.zip压缩包，即满足大模型接口规范，可把压缩包上传至平台进行大模型入仓校验。
----swin_transformer_tiny   // 该文件夹必须有唯一的命名，不能和其他预训练大模型的文件夹命名重复，否则会引起导入失败。
+-swin-transformer          // 该文件夹命名无要求，改造完成后将该文件夹打包为.zip压缩包，即满足大模型接口规范，可把压缩包上传至平台进行大模型入仓校验。
+---swin_transformer_tiny   // 该文件夹根据模型命名即可，但是必须有唯一的命名，不能和其他预训练大模型的文件夹命名重复，否则可能会引起导入失败。
 -----__init__.py           // python包初始化文件，需在里面导入exported_model.py中定义的预训练大模型接口类。
 -----exported_model.py     // 需要用户编写的预训练大模型接口类定义文件，文件命名无强制要求。
 -----model.py              // 预训练大模型原本的定义文件，命名无要求（如模型定义复杂，可用多个.py文件定义）。
 ---hubconf.py              // 该文件必须命名为hubconf.py，否则系统无法识别。
----weights                 // 存放模型参数和模型图的文件夹。
+---weights                 // 存放模型参数（和模型图）的文件夹。
 -----swin_t-704ceda3.pth   // 模型参数。在exported_model.py的from_pretrained()函数中加载该文件。
 ```
 
 1. 以[swin-transformer](https://github.com/chenyaofo/downstream-platform-interface/tree/main/example/swin-transformer)为例，先介绍如何编写
    [hubconf.py](https://github.com/chenyaofo/downstream-platform-interface/blob/main/example/swin-transformer/hubconf.py)。
    
-   填写dependencies列表，即大模型推理所用到的所有python包的列表。代码会自动检查能否导入列表中的包，如导入失败，则报错。
+   填写dependencies列表，即定义大模型所用到的所有python包的列表。系统运行时会检查列表中的包是否安装，如未安装，则报错。
    ```
    dependencies = ["torch", "torchvision"]
    ```
@@ -37,7 +37,7 @@
    from swin_transformer_tiny import SwinTransformer_Tiny
    ```
    
-   重命名SwinTransformer_Tiny为BIG_PRETRAINED_MODEL，以方便后续统一调用。
+   重命名SwinTransformer_Tiny为BIG_PRETRAINED_MODEL，以方便后续统一调用。这一步命名是一定要进行的，且重命名一定要命名为`BIG_PRETRAINED_MODEL`，否则系统无法识别加载预训练大模型。
    ```
    BIG_PRETRAINED_MODEL = SwinTransformer_Tiny
    ```
@@ -58,7 +58,7 @@
 
    定义SwinTransformer_Tiny类（类名用户自定，但注意需要在hubconf.py中通过BIG_PRETRAINED_MODEL = SwinTransformer_Tiny把类名赋值给BIG_PRETRAINED_MODEL），继承预训练模型的原始类SwinTransformer和大模型接口抽象类BigModel4DownstreamInterface。
 
-   初始化self.feature_entries列表，保存所有SwinTransformerBlock对象。
+   初始化self.feature_entries列表，这里是定义模型的中间特征从什么地方拿，这里的swin transformer是从SwinTransformerBlock的输出结果中拿。
    
    初始化self.hooks列表，用于存储获取特征所需的hook对象。
    
@@ -77,7 +77,7 @@
         self.feature_buffers = dict()
    ```
 
-   返回对模型的描述。
+   `get_description`函数返回对模型的描述。
    ```
     def get_description(self):
         return '''
@@ -87,11 +87,11 @@
                '''
    ```
 
-   该函数用于加载预训练模型。其中“cls”为class SwinTransformer_Tiny本身。
+   `from_pretrained`函数用于加载预训练模型。其中“cls”为class SwinTransformer_Tiny本身。
 
-   首先通过 model = cls(xxx) 实例化一个SwinTransformer_Tiny对象。
+   首先通过 model = cls(xxx) 实例化一个SwinTransformer_Tiny对象，这里实例化的时候需要将所有的参数的设置好，用户调用的时候一般不会给任何参数。
 
-   然后，用户需在该函数中显式给出预训练模型的参数的路径（如样例中的“swin_t-704ceda3.pth”），确保运行该函数即可加载预训练模型参数。
+   然后，用户需在该函数中显式给出预训练模型的参数的路径（如样例中的“swin_t-704ceda3.pth”），确保运行该函数即可加载预训练模型参数。注意参数权重的路径一般是基于本文件的相对路径得到的，如下述代码中，先得到本文件路径`os.path.dirname(__file__)`，再通过相对路径给出权重的路径。
 
    最后，使用model.load_state_dict(torch.load(load_weights, map_location="cpu"))把模型参数导入至model对象中并返回。
 
@@ -122,13 +122,19 @@
         return model
    ```
 
-   返回self.feature_entries的长度。
+   ---
+
+   `get_depth`函数返回模型的深度，这个深度和在init函数中定义的feature_entries有关，返回feature_entries的长度即可。
+
    ```
     def get_depth(self) -> int:
         return len(self.feature_entries)
    ```
 
-   函数输入为“模型输入图像的尺寸”，以及“用户指定的layer_index（也就是feature_entries的index）”，返回该index所对应的特征的尺寸。
+    ---
+
+   `get_features_shape`函数输入为input_shape（模型输入图像的尺寸），以及layer_index（用户指定的layer_index，也就是feature_entries的index），返回该index所对应的特征的尺寸。举个例子，代码中用户想知道当输入大小(3,224,224)，第6层的输出shape是多少，函数将返回元组(64,28,28)，`(64,28,28) = get_features_shape(input_shape=(3,224,224), layer_index=6)`。注意这里的shape全部都是不包括batch size的。
+
    ```
     def get_features_shape(self, input_shape: typing.Sequence[int] = None, layer_index: int = None):
         if len(input_shape) != 3:
@@ -150,16 +156,21 @@
         return shapes[layer_index]
    ```
 
+    ---
+
    根据该预训练模型是否存在金字塔特征结构，直接返回True或者False。例如，Swin transformer存在不同长宽的feature map，拥有金字塔结构的特征。而Vision-transformer的feature map的长和宽不随网络深度变化而变化，故不存在金字塔结构的特征。
+
    
    ```
     def is_hierarchical_features(self) -> bool:
         return True
    ```
    
-   为对应的模块注册钩子hook，以在模型推理时通过钩子hook获取模型的中间特征。函数的输入是“需要注册钩子获取中间特征的layer/feature_entries/模块的index”。
+   ---
+
+   `register_features_buffer_by_layer_indexes`函数是用户声明需要获取哪些层的features。在实现上，需要根据用户注册的层index为对应的模块注册钩子hook，以在模型推理时通过钩子hook获取模型的中间特征。
    
-   定义save_features_hook函数，让钩子hook在模型推理时自动把该层输出特征保存到字典feature_buffers中。
+   定义SaveFeaturesHook类，让钩子hook在模型forward时自动把指定层输出特征保存到字典feature_buffers中。
 
    ```
     def register_features_buffer_by_layer_indexes(self, layer_indexes: typing.Sequence[int]) -> None:
@@ -180,14 +191,10 @@
             def excute(self, m, in_features, out_features):
                 self.feature_buffers[self.layer_index] = out_features
 
-        # def save_features_hook(m, in_features, out_features, layer_index: int, feature_buffers: dict):
-        #     feature_buffers[layer_index] = out_features
-
         for index, module in enumerate(self.feature_entries):
             if index in layer_indexes:
                 self.hooks.append(
                     module.register_forward_hook(
-                        # functools.partial(save_features_hook, layer_index=index, feature_buffers=self.feature_buffers)
                         SaveFeaturesHook(
                             feature_buffers=self.feature_buffers,
                             layer_index=index
@@ -196,7 +203,7 @@
                 )
    ```
 
-   根据输入的index列表，返回对应的feature maps。
+   `fetch_features`函数根据之前register的index列表，返回对应的feature maps用作下游任务使用。
    ```
    def fetch_features(self) -> typing.Sequence[torch.Tensor]:
         if not hasattr(self, "layer_indexes"):
@@ -206,7 +213,9 @@
         ]
    ```
 
-   模型推理函数。
+    ---
+
+   最后一步，因为在预训练中，模型可能包含一些fc heads，这在下游任务中是没有用的，因此这里修改模型的模型foward函数，使得其仅forward模型的主干部分而不包括fc heads，节约计算资源。
    ```
     def forward(self, x: torch.Tensor):
         # here, we slightly modify original forward function, make it run without classfier head
